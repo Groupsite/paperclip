@@ -118,6 +118,35 @@ class StorageTest < Test::Unit::TestCase
     end
   end
 
+  context "Generating a url with an expiration and a style" do
+    setup do
+      AWS::S3::Base.stubs(:establish_connection!)
+      rebuild_model :storage => :s3,
+                    :styles => { :thumb => "100x100", :square => "32x32#" },
+                    :s3_credentials => {
+                      :production   => { :bucket => "prod_bucket" },
+                      :development  => { :bucket => "dev_bucket" }
+                    },
+                    :s3_host_alias => "something.something.com",
+                    :path => ":attachment/:style/:basename.:extension",
+                    :url => ":s3_alias_url"
+
+      rails_env("production")
+
+      @file = File.new(File.join(File.dirname(__FILE__), 'fixtures', '5k.png'), 'rb')
+      @dummy = Dummy.new
+      @dummy.avatar = @file
+
+      AWS::S3::S3Object.expects(:url_for).with("avatars/stringio.txt", "prod_bucket", { :expires_in => 3600, :use_ssl => false })
+    end
+
+    should "should succeed" do
+      assert_contains @dummy.avatar.expiring_url, "original"
+      assert_contains @dummy.avatar.expiring_url(:thumb), "thumb"
+      assert_contains @dummy.avatar.expiring_url(:square), "square"
+    end
+  end
+
   context "Generating a url with an expiration with s3_protocol of https" do
     setup do
       AWS::S3::Base.stubs(:establish_connection!)
@@ -237,7 +266,7 @@ class StorageTest < Test::Unit::TestCase
 
     should "get the right bucket name" do
       assert "bucket_a", Dummy.new(:other => 'a').avatar.bucket_name
-      assert "bucket_b", Dummy.new(:other => 'b').avatar.bucket_name
+      assert "zorgon_the_destroyer", Dummy.new(:other => 'b').avatar.bucket_name
     end
   end
 
