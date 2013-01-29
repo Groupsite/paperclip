@@ -15,13 +15,17 @@ module Paperclip
     # File or path.
     def self.from_file file
       file = file.path if file.respond_to? "path"
-      geometry = begin
-                   Paperclip.run("identify", "-format", "%wx%h", "#{file}[0]")
-                 rescue PaperclipCommandLineError
+      geometry = if !file.blank?
+                   begin
+                     Paperclip.run("identify", "-format", "%wx%h", "#{file}[0]")
+                   rescue PaperclipCommandLineError
+                     ""
+                   end
+                 else
                    ""
                  end
       parse(geometry) ||
-        raise(NotIdentifiedByImageMagickError.new("#{file} is not recognized by the 'identify' command."))
+        raise(NotIdentifiedByImageMagickError.new("#{file.inspect} is not recognized by the 'identify' command."))
     end
 
     # Parses a "WxH" formatted string, where W is the width and H is the height.
