@@ -17,7 +17,6 @@ module Paperclip
       @file                = file
       @crop                = geometry[-1,1] == '#'
       @target_geometry     = Geometry.parse geometry
-      @current_geometry    = Geometry.from_file @file
       @source_file_options = options[:source_file_options]
       @convert_options     = options[:convert_options]
       @whiny               = options[:whiny].nil? ? true : options[:whiny]
@@ -29,6 +28,13 @@ module Paperclip
       @current_format      = File.extname(@file.path)
       @basename            = File.basename(@file.path, @current_format)
 
+    end
+
+    def current_geometry
+      if !defined?(@current_geometry)
+        @current_geometry = Geometry.from_file @file
+      end
+      @current_geometry
     end
 
     # Returns true if the +target_geometry+ is meant to crop.
