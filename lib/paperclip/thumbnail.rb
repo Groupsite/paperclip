@@ -2,7 +2,7 @@ module Paperclip
   # Handles thumbnailing images that are uploaded.
   class Thumbnail < Processor
 
-    attr_accessor :current_geometry, :target_geometry, :format, :whiny, :convert_options, :source_file_options
+    attr_accessor :current_geometry, :target_geometry, :format, :whiny, :convert_options, :source_file_options, :auto_orient
 
     # Creates a Thumbnail object set to work on the +file+ given. It
     # will attempt to transform the image into one defined by +target_geometry+
@@ -27,12 +27,15 @@ module Paperclip
 
       @current_format      = File.extname(@file.path)
       @basename            = File.basename(@file.path, @current_format)
-
+      @auto_orient         = options[:auto_orient].nil? ? true : options[:auto_orient]
     end
 
     def current_geometry
       if !defined?(@current_geometry)
         @current_geometry = Geometry.from_file @file
+        if @auto_orient && @current_geometry.respond_to?(:auto_orient)
+          @current_geometry.auto_orient
+        end
       end
       @current_geometry
     end
@@ -77,6 +80,7 @@ module Paperclip
     def transformation_command
       scale, crop = current_geometry.transformation_to(@target_geometry, crop?)
       trans = []
+      trans << "-auto-orient" if auto_orient
       trans << "-resize" << %["#{scale}"] unless scale.nil? || scale.empty?
       trans << "-crop" << %["#{crop}"] << "+repage" if crop
       trans

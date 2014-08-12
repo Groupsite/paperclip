@@ -4,11 +4,14 @@ module Paperclip
   class Geometry
     attr_accessor :height, :width, :modifier
 
+    EXIF_ROTATED_ORIENTATION_VALUES = [5, 6, 7, 8]
+
     # Gives a Geometry representing the given height and width
-    def initialize width = nil, height = nil, modifier = nil
+    def initialize width = nil, height = nil, modifier = nil, orientation = nil
       @height = height.to_f
       @width  = width.to_f
       @modifier = modifier
+      @orientation = orientation && orientation.to_i
     end
 
     # Uses ImageMagick to determing the dimensions of a file, passed in as either a
@@ -16,7 +19,7 @@ module Paperclip
     def self.from_file file
       file = file.path if file.respond_to? "path"
       geometry = begin
-                   Paperclip.run("identify", "-format %wx%h :file", :file => "#{file}[0]")
+                   Paperclip.run("identify", "-format :format :file", :file => "#{file}[0]", :format => "%wx%h,%[exif:orientation]")
                  rescue PaperclipCommandLineError
                    ""
                  end
@@ -26,8 +29,16 @@ module Paperclip
 
     # Parses a "WxH" formatted string, where W is the width and H is the height.
     def self.parse string
-      if match = (string && string.match(/\b(\d*)x?(\d*)\b([\>\<\#\@\%^!])?/i))
-        Geometry.new(*match[1,3])
+      if match = (string && string.match(/\b(\d*)x?(\d*)\b(?:,(\d?))?([\>\<\#\@\%^!])?/i))
+        Geometry.new(match[1], match[2], match[4], match[3])
+      end
+    end
+
+    # Swaps the height and width if necessary
+    def auto_orient
+      if EXIF_ROTATED_ORIENTATION_VALUES.include?(@orientation)
+        @height, @width = @width, @height
+        @orientation -= 4
       end
     end
 
