@@ -17,7 +17,8 @@ module Paperclip
         :default_style     => :original,
         :storage           => :filesystem,
         :use_timestamp     => true,
-        :whiny             => Paperclip.options[:whiny] || Paperclip.options[:whiny_thumbnails]
+        :whiny             => Paperclip.options[:whiny] || Paperclip.options[:whiny_thumbnails],
+        :preserve_files    => false
       }
     end
 
@@ -328,9 +329,11 @@ module Paperclip
 
     def queue_existing_for_delete #:nodoc:
       return unless file?
-      @queued_for_delete += [:original, *styles.keys].uniq.map do |style|
-        path(style) if exists?(style)
-      end.compact
+      unless @options[:preserve_files]
+        @queued_for_delete += [:original, *styles.keys].uniq.map do |style|
+          path(style) if exists?(style)
+        end.compact
+      end
       instance_write(:file_name, nil)
       instance_write(:content_type, nil)
       instance_write(:file_size, nil)
